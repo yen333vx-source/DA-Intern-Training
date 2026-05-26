@@ -10,14 +10,14 @@ conn = pymysql.connect(
 cursor = conn.cursor()
 
 sql = """
-SELECT 
-    c.customerNumber, 
-    c.customerName, 
-    o.orderNumber, 
-    o.orderDate, 
+SELECT
+    c.customerNumber,
+    c.customerName,
+    o.orderNumber,
+    o.orderDate,
     o.status
 FROM customers c
-INNER JOIN orders o 
+INNER JOIN orders o
 ON c.customerNumber = o.customerNumber
 LIMIT 5;
 """
@@ -26,8 +26,13 @@ cursor.execute(sql)
 
 rows = cursor.fetchall()
 
-for row in rows:
-    print(row)
+with open("customer_orders_basic.txt", "w", encoding="utf-8") as f:
+
+    f.write("CUSTOMER ORDER INFORMATION\n")
+    f.write("============================\n\n")
+
+    for row in rows:
+        f.write(str(row) + "\n")
 
 cursor.close()
 conn.close()
