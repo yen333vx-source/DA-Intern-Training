@@ -8,36 +8,37 @@ conn = pymysql.connect(
     database='classicmodels'
 )
 
-sql = """
-SELECT
-    c.customerNumber,
-    c.customerName,
-    SUM(p.amount) AS totalpayment
-FROM customers c
-LEFT JOIN payments p
-ON c.customerNumber = p.customerNumber
-GROUP BY c.customerNumber, c.customerName
-ORDER BY totalpayment DESC
-LIMIT 7;
-"""
+customers = pd.read_sql("SELECT customerNumber, customerName FROM customers", conn)
+payments = pd.read_sql("SELECT customerNumber, amount FROM payments", conn)
 
-df = pd.read_sql(sql, conn)
+df = pd.merge(
+    customers,
+    payments,
+    on="customerNumber",
+    how="left"
+)
 
-df['totalpayment'] = df['totalpayment'].fillna(0)
+df = df.groupby(
+    ["customerNumber", "customerName"],
+    as_index=False
+)["amount"].sum()
 
 df = df.rename(columns={
-    'customerNumber': 'Customer Number',
-    'customerName': 'Customer Name',
-    'totalpayment': 'Total Payment'
+    "amount": "Total Payment",
+    "customerNumber": "Customer Number",
+    "customerName": "Customer Name"
 })
 
-df['Total Payment'] = df['Total Payment'].round(2)
+df["Total Payment"] = df["Total Payment"].fillna(0)
 
-with open("customer_payments.txt", "w", encoding="utf-8") as f:
+df = df.sort_values(by="Total Payment", ascending=False).head(7)
 
-    f.write("CUSTOMER PAYMENT INFORMATION\n")
-    f.write("================================\n\n")
+df["Total Payment"] = df["Total Payment"].round(2)
 
-    f.write(df.to_string(index=False))
+df.to_csv(
+    "pandas_total_payments.txt",
+    sep="\t",
+    index=False
+)
 
 conn.close()
