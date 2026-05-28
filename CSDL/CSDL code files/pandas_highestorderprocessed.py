@@ -8,20 +8,11 @@ conn = pymysql.connect(
     database='classicmodels'
 )
 
-employees = pd.read_sql("""
-    SELECT employeeNumber, firstName, lastName
-    FROM employees
-""", conn)
+employees = pd.read_sql("SELECT employeeNumber, firstName, lastName FROM employees", conn)
 
-customers = pd.read_sql("""
-    SELECT customerNumber, salesRepEmployeeNumber
-    FROM customers
-""", conn)
+customers = pd.read_sql("SELECT customerNumber, salesRepEmployeeNumber FROM customers", conn)
 
-orders = pd.read_sql("""
-    SELECT orderNumber, customerNumber
-    FROM orders
-""", conn)
+orders = pd.read_sql("SELECT orderNumber, customerNumber FROM orders", conn)
 
 emp_cust = pd.merge(
     employees,
