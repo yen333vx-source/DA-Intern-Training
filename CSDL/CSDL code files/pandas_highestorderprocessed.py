@@ -8,36 +8,63 @@ conn = pymysql.connect(
     database='classicmodels'
 )
 
-sql = """
-SELECT
-    e.employeeNumber,
-    CONCAT(e.firstName, ' ', e.lastName) AS employeeName,
-    COUNT(o.orderNumber) AS totalOrdersProcessed
-FROM employees e
-INNER JOIN customers c
-ON e.employeeNumber = c.salesRepEmployeeNumber
-INNER JOIN orders o
-ON c.customerNumber = o.customerNumber
-GROUP BY e.employeeNumber, e.firstName, e.lastName
-ORDER BY totalOrdersProcessed DESC
-LIMIT 1;
-"""
+employees = pd.read_sql("""
+    SELECT employeeNumber, firstName, lastName
+    FROM employees
+""", conn)
 
-df = pd.read_sql(sql, conn)
+customers = pd.read_sql("""
+    SELECT customerNumber, salesRepEmployeeNumber
+    FROM customers
+""", conn)
 
+orders = pd.read_sql("""
+    SELECT orderNumber, customerNumber
+    FROM orders
+""", conn)
+
+emp_cust = pd.merge(
+    employees,
+    customers,
+    left_on="employeeNumber",
+    right_on="salesRepEmployeeNumber",
+    how="inner"
+)
+
+df = pd.merge(
+    emp_cust,
+    orders,
+    on="customerNumber",
+    how="inner"
+)
+
+df["employeeName"] = df["firstName"] + " " + df["lastName"]
+
+df = df.groupby(
+    ["employeeNumber", "employeeName"],
+    as_index=False
+)["orderNumber"].count()
 
 df = df.rename(columns={
-    'employeeNumber': 'Employee Number',
-    'employeeName': 'Employee Name',
-    'totalOrdersProcessed': 'Total Orders Processed'
+    "employeeNumber": "Employee Number",
+    "orderNumber": "Total Orders Processed"
 })
 
+df = df[[
+    "Employee Number",
+    "employeeName",
+    "Total Orders Processed"
+]]
 
-with open("employee_orders.txt", "w", encoding="utf-8") as f:
+df = df.sort_values(
+    by="Total Orders Processed",
+    ascending=False
+).head(1)
 
-    f.write("EMPLOYEE ORDER PROCESSING INFORMATION\n")
-    f.write("=======================================\n\n")
-
-    f.write(df.to_string(index=False))
+df.to_csv(
+    "pandas_highestorderprocessed.txt",
+    sep="\t",
+    index=False
+)
 
 conn.close()
