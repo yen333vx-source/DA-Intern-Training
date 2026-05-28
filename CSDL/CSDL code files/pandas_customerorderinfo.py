@@ -8,26 +8,31 @@ conn = pymysql.connect(
     database='classicmodels'
 )
 
-sql = """
-SELECT
-    c.customerNumber,
-    c.customerName,
-    o.orderNumber,
-    o.orderDate,
-    o.status
-FROM customers c
-INNER JOIN orders o
-ON c.customerNumber = o.customerNumber
-LIMIT 5;
-"""
+customers = pd.read_sql("SELECT * FROM customers", conn)
+orders = pd.read_sql("SELECT * FROM orders", conn)
 
-df = pd.read_sql(sql, conn)
+df = pd.merge(
+    customers,
+    orders,
+    on="customerNumber",
+    how="inner"
+)
 
-with open("customer_orders.txt", "w", encoding="utf-8") as f:
+df = df[[
+    "customerNumber",
+    "customerName",
+    "orderNumber",
+    "orderDate",
+    "status"
+]]
 
-    f.write("CUSTOMER ORDER INFORMATION\n")
-    f.write("============================\n\n")
+df = df.sort_values(by="orderNumber")
+df = df.head(5)
 
-    f.write(df.to_string(index=False))
+df.to_csv(
+    "pandas_customer_orders.txt",
+    sep="\t",
+    index=False
+)
 
 conn.close()
